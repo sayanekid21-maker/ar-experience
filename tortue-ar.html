@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tortue Luth – Réalité Augmentée</title>
+
+  <!-- model-viewer : le composant AR de Google -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a1628;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: white;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Barre du haut ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .topbar-title {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar-title h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .topbar-title p {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 1px;
+    }
+
+    .sound-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 0.5px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 18px;
+    }
+
+    .sound-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* ── Viewer AR ── */
+    model-viewer {
+      flex: 1;
+      width: 100%;
+      background: transparent;
+      --poster-color: transparent;
+    }
+
+    /* ── Boutons de zoom ── */
+    .zoom-controls {
+      position: absolute;
+      right: 16px;
+      bottom: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .zoom-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.6);
+      border: 0.5px solid rgba(255,255,255,0.2);
+      color: white;
+      font-size: 22px;
+      font-weight: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.15s;
+    }
+
+    .zoom-btn:active { background: rgba(255,255,255,0.15); }
+
+    /* ── Bouton lancer en AR ── */
+    #ar-button {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1D9E75;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.1s;
+      z-index: 10;
+    }
+
+    #ar-button:hover  { background: #0F6E56; }
+    #ar-button:active { transform: translateX(-50%) scale(0.96); }
+    #ar-button[hidden] { display: none; }
+
+    /* ── Info fiche ── */
+    .info-bar {
+      display: flex;
+      gap: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(8px);
+      flex-shrink: 0;
+    }
+
+    .info-item {
+      flex: 1;
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 0.5px solid rgba(255,255,255,0.08);
+    }
+
+    .info-item:last-child { border-right: none; }
+
+    .info-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #5DCAA5;
+    }
+
+    .info-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.45);
+      margin-top: 2px;
+    }
+
+    /* ── Instruction overlay ── */
+    .hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 5;
+      opacity: 1;
+      transition: opacity 0.5s;
+    }
+
+    .hint.hidden { opacity: 0; }
+
+    .hint-icon {
+      font-size: 40px;
+      display: block;
+      margin-bottom: 8px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .hint p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.5;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.1); }
+    }
+
+    /* ── Loading screen ── */
+    .loading {
+      position: absolute;
+      inset: 0;
+      background: #0a1628;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+      transition: opacity 0.6s;
+    }
+
+    .loading.done { opacity: 0; pointer-events: none; }
+
+    .loader-ring {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(93,202,165,0.2);
+      border-top-color: #5DCAA5;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Écran de chargement -->
+  <div class="loading" id="loading">
+    <div class="loader-ring"></div>
+    <p>Chargement de la tortue…</p>
+  </div>
+
+  <!-- Barre du haut -->
+  <div class="topbar">
+    <div class="topbar-title">
+      <h1>🐢 Tortue Luth</h1>
+      <p>Dermochelys coriacea</p>
+    </div>
+    <div class="sound-btn" id="soundBtn" title="Son activé/désactivé">🔊</div>
+  </div>
+
+  <!-- Viewer 3D + AR -->
+  <model-viewer
+    id="viewer"
+    src="models/model_95a_-_adult_leatherback_sea_turtle_mac.glb"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    camera-controls
+    touch-action="pan-y"
+    auto-rotate
+    auto-rotate-delay="3000"
+    rotation-per-second="20deg"
+    shadow-intensity="1"
+    exposure="1"
+    ar-scale="fixed"
+    scale="1 1 1"
+    min-camera-orbit="auto auto 0.5m"
+    max-camera-orbit="auto auto 5m"
+    ar-button="#ar-button"
+  >
+
+    <!-- Indication gestuelle -->
+    <div class="hint" id="hint">
+      <span class="hint-icon">👆</span>
+      <p>Faites glisser pour tourner<br>Pincez pour zoomer</p>
+    </div>
+
+    <!-- Bouton AR -->
+    <button id="ar-button" slot="ar-button">
+      📱 Voir en réalité augmentée
+    </button>
+
+    <!-- Boutons zoom -->
+    <div class="zoom-controls">
+      <div class="zoom-btn" id="zoomIn"  title="Zoomer">+</div>
+      <div class="zoom-btn" id="zoomOut" title="Dézoomer">−</div>
+    </div>
+
+  </model-viewer>
+
+  <!-- Fiche d'infos -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="info-value">1,8 m</div>
+      <div class="info-label">Longueur</div>
+    </div>
+    <div class="info-item">
+      <div class="info-value">500 kg</div>
+      <div class="info-label">Poids max.</div>
+    </div>
+    <div class="info-item">
+      <div class="info-value">80 ans</div>
+      <div class="info-label">Espérance de vie</div>
+    </div>
+    <div class="info-item">
+      <div class="info-value">En danger</div>
+      <div class="info-label">Statut UICN</div>
+    </div>
+  </div>
+
+  <!-- Audio (remplacer par votre fichier son) -->
+  <audio id="audio" loop>
+    <source src="sounds/tortue.mp3" type="audio/mpeg" />
+  </audio>
+
+  <script>
+    const viewer   = document.getElementById('viewer');
+    const loading  = document.getElementById('loading');
+    const hint     = document.getElementById('hint');
+    const soundBtn = document.getElementById('soundBtn');
+    const audio    = document.getElementById('audio');
+    const zoomIn   = document.getElementById('zoomIn');
+    const zoomOut  = document.getElementById('zoomOut');
+
+    let soundOn = true;
+
+    // Masquer le loading quand le modèle est prêt
+    viewer.addEventListener('load', () => {
+      loading.classList.add('done');
+      // Lancer le son automatiquement
+      audio.play().catch(() => {
+        // Autoplay bloqué sur certains navigateurs — attendre un tap
+        document.addEventListener('click', () => audio.play(), { once: true });
+      });
+    });
+
+    // Masquer l'indication gestuelle après 4 secondes ou au premier toucher
+    setTimeout(() => hint.classList.add('hidden'), 4000);
+    viewer.addEventListener('camera-change', () => hint.classList.add('hidden'), { once: true });
+
+    // Bouton son
+    soundBtn.addEventListener('click', () => {
+      soundOn = !soundOn;
+      if (soundOn) {
+        audio.play();
+        soundBtn.textContent = '🔊';
+      } else {
+        audio.pause();
+        soundBtn.textContent = '🔇';
+      }
+    });
+
+    // Zoom via boutons
+    let zoomLevel = 2; // mètres
+
+    zoomIn.addEventListener('click', () => {
+      zoomLevel = Math.max(0.5, zoomLevel - 0.4);
+      viewer.cameraOrbit = `auto auto ${zoomLevel}m`;
+    });
+
+    zoomOut.addEventListener('click', () => {
+      zoomLevel = Math.min(5, zoomLevel + 0.4);
+      viewer.cameraOrbit = `auto auto ${zoomLevel}m`;
+    });
+  </script>
+
+</body>
+</html>
