@@ -2,45 +2,61 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tortue Luth – Réalité Augmentée</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Tortue Luth – AR</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #0a1628; }
 
     body {
-      background: #0a1628;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       color: white;
-      height: 100dvh;
       display: flex;
       flex-direction: column;
+      height: 100vh;
+      height: -webkit-fill-available;
       overflow: hidden;
     }
 
     .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      background: rgba(0,0,0,0.5);
+      padding: 16px 20px 12px;
+      background: rgba(0,0,0,0.6);
       flex-shrink: 0;
     }
-
-    .topbar h1 { font-size: 16px; font-weight: 600; }
-    .topbar p  { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+    .topbar h1 { font-size: 17px; font-weight: 600; }
+    .topbar p  { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; }
 
     model-viewer {
-      flex: 1;
       width: 100%;
-      background: transparent;
-      --poster-color: transparent;
+      flex: 1;
+      background-color: #0a1628;
+      --poster-color: #0a1628;
     }
+
+    #ar-button {
+      background: #1D9E75;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    #ar-button[hidden] { display: none; }
 
     .zoom-controls {
       position: absolute;
       right: 16px;
-      bottom: 110px;
+      bottom: 100px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -48,153 +64,106 @@
     }
 
     .zoom-btn {
-      width: 44px;
-      height: 44px;
+      width: 46px;
+      height: 46px;
       border-radius: 12px;
-      background: rgba(0,0,0,0.6);
-      border: 0.5px solid rgba(255,255,255,0.25);
+      background: rgba(0,0,0,0.65);
+      border: 0.5px solid rgba(255,255,255,0.3);
       color: white;
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 300;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    .zoom-btn:active { background: rgba(255,255,255,0.15); }
-
-    #ar-button {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1D9E75;
-      color: white;
-      border: none;
-      border-radius: 50px;
-      padding: 14px 30px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      z-index: 10;
-    }
-
-    #ar-button[hidden] { display: none; }
-
-    .hint {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      pointer-events: none;
-      z-index: 5;
-      transition: opacity 0.5s;
-    }
-
-    .hint.hidden { opacity: 0; }
-
-    .hint-icon {
-      font-size: 36px;
-      display: block;
-      margin-bottom: 8px;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    .hint p { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.5; }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50%       { transform: scale(1.1); }
     }
 
     .info-bar {
       display: flex;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
       flex-shrink: 0;
     }
-
     .info-item {
       flex: 1;
-      padding: 10px 8px;
+      padding: 10px 6px;
       text-align: center;
       border-right: 0.5px solid rgba(255,255,255,0.08);
     }
-
     .info-item:last-child { border-right: none; }
-    .info-value { font-size: 14px; font-weight: 600; color: #5DCAA5; }
+    .info-value { font-size: 13px; font-weight: 600; color: #5DCAA5; }
     .info-label { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
 
     .loading {
-      position: absolute;
+      position: fixed;
       inset: 0;
       background: #0a1628;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      z-index: 100;
-      transition: opacity 0.6s;
+      gap: 20px;
+      z-index: 999;
+      transition: opacity 0.8s;
     }
-
     .loading.done { opacity: 0; pointer-events: none; }
-
-    .loader-ring {
-      width: 48px;
-      height: 48px;
+    .ring {
+      width: 52px; height: 52px;
       border: 3px solid rgba(93,202,165,0.2);
       border-top-color: #5DCAA5;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loading p { font-size: 13px; color: rgba(255,255,255,0.5); }
+    .loading p { font-size: 14px; color: rgba(255,255,255,0.5); }
+
+    .hint {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    .hint.hidden { opacity: 0; }
+    .hint-icon { font-size: 38px; animation: pulse 2s infinite; display: block; margin-bottom: 10px; }
+    .hint p { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
   </style>
 </head>
 <body>
 
   <div class="loading" id="loading">
-    <div class="loader-ring"></div>
+    <div class="ring"></div>
     <p>Chargement de la tortue…</p>
   </div>
 
   <div class="topbar">
-    <div>
-      <h1>🐢 Tortue Luth</h1>
-      <p>Dermochelys coriacea</p>
-    </div>
+    <h1>🐢 Tortue Luth</h1>
+    <p>Dermochelys coriacea</p>
   </div>
 
   <model-viewer
     id="viewer"
-    src="_adult_leatherback_sea_turtle_mac.glb"
+    src="https://sayanekid21-maker.github.io/ar-experience/_adult_leatherback_sea_turtle_mac.glb"
     ar
     ar-modes="webxr scene-viewer quick-look"
     camera-controls
-    touch-action="pan-y"
     auto-rotate
     auto-rotate-delay="2000"
     rotation-per-second="20deg"
     shadow-intensity="1"
-    exposure="1"
+    exposure="1.2"
     ar-scale="fixed"
-    scale="1 1 1"
-    min-camera-orbit="auto auto 0.5m"
-    max-camera-orbit="auto auto 5m"
     ar-button="#ar-button"
+    style="background-color:#0a1628"
   >
     <div class="hint" id="hint">
       <span class="hint-icon">👆</span>
-      <p>Faites glisser pour tourner<br>Pincez pour zoomer</p>
+      <p>Glissez pour tourner<br>Pincez pour zoomer</p>
     </div>
 
-    <button id="ar-button" slot="ar-button">
+    <button slot="ar-button" id="ar-button">
       📱 Voir en réalité augmentée
     </button>
 
@@ -231,18 +200,22 @@
     const zoomOut = document.getElementById('zoomOut');
     let zoom = 2;
 
-    viewer.addEventListener('load', () => loading.classList.add('done'));
+    viewer.addEventListener('load', () => {
+      loading.classList.add('done');
+    });
 
-    setTimeout(() => hint.classList.add('hidden'), 4000);
+    // Masquer le loading après 10s même si pas de load event
+    setTimeout(() => loading.classList.add('done'), 10000);
+
+    setTimeout(() => hint.classList.add('hidden'), 5000);
     viewer.addEventListener('camera-change', () => hint.classList.add('hidden'), { once: true });
 
     zoomIn.addEventListener('click', () => {
       zoom = Math.max(0.5, zoom - 0.4);
       viewer.cameraOrbit = `auto auto ${zoom}m`;
     });
-
     zoomOut.addEventListener('click', () => {
-      zoom = Math.min(5, zoom + 0.4);
+      zoom = Math.min(6, zoom + 0.4);
       viewer.cameraOrbit = `auto auto ${zoom}m`;
     });
   </script>
